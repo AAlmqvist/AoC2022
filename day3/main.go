@@ -15,10 +15,20 @@ func readInput(filename string) []string {
 	return strings.Split(string(input), "\n")
 }
 
-func splitRucksack(line string) (string, string) {
-	first := line[:len(line)/2]
-	second := line[len(line)/2:]
-	return first, second
+// Turn string into uint64 where each bit in place 1-52 represents if badge is present
+func sortBadges(badges string) uint64 {
+	var sorted uint64
+	for _, badge := range badges {
+		val := uint64(1 << getValue(badge))
+		if sorted&val == 0 {
+			sorted += val
+		}
+	}
+	return sorted
+}
+
+func splitRucksack(line string) (uint64, uint64) {
+	return sortBadges(line[:len(line)/2]), sortBadges(line[len(line)/2:])
 }
 
 func getValue(in rune) int {
@@ -31,15 +41,16 @@ func getValue(in rune) int {
 func part1(input []string) int {
 	part1 := 0
 	for _, line := range input {
+		// Sort the badges by flipping bit to 1 in places where badge is present
 		first, second := splitRucksack(line)
-	inner:
-		for _, char1 := range first {
-			for _, char2 := range second {
-				if char1 == char2 {
-					part1 += getValue(char1)
-					break inner
-				}
+		match := first & second
+		i := 1
+		for i < 64 {
+			if match&(1<<i) > 0 {
+				part1 += i
+				break
 			}
+			i += 1
 		}
 	}
 	return part1
@@ -52,16 +63,14 @@ func part2(input []string) int {
 		groups = append(groups, input[i:i+3])
 	}
 	for _, group := range groups {
-	groupLoop:
-		for _, char1 := range group[0] {
-			for _, char2 := range group[1] {
-				for _, char3 := range group[2] {
-					if char1 == char2 && char1 == char3 {
-						part2 += getValue(char1)
-						break groupLoop
-					}
-				}
+		match := sortBadges(group[0]) & sortBadges(group[1]) & sortBadges(group[2])
+		i := 1
+		for i < 64 {
+			if match&(1<<i) > 0 {
+				part2 += i
+				break
 			}
+			i += 1
 		}
 	}
 	return part2

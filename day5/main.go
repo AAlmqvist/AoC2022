@@ -15,57 +15,56 @@ type Move struct {
 
 type Stack struct {
 	top *Crate
-	nbr int
 }
 
 func (s *Stack) Place(crate *Crate) {
 	if s.top == nil {
 		s.top = crate
-		s.nbr = 1
+		for s.top.over != nil {
+			s.top = s.top.over
+		}
 		return
 	}
 	crate.under = s.top
 	s.top.over = crate
 	s.top = crate
-	s.nbr += 1
+	for s.top.over != nil {
+		s.top = s.top.over
+	}
 	return
 }
 
-func (s *Stack) Pick() *Crate {
+func (s *Stack) Pick(nbr int) *Crate {
 	if s.top == nil {
 		return nil
 	}
-	if s.nbr == 1 {
-		toReturn := s.top
-		s.top = nil
-		s.nbr = 0
-		return toReturn
-	}
 	toReturn := s.top
-	s.top = s.top.under
-	s.top.over = nil
-	toReturn.under = nil
-	s.nbr -= 1
+	i := 1
+	for i < nbr {
+		toReturn = toReturn.under
+		i++
+	}
+	s.top = toReturn.under
+	if s.top != nil {
+		s.top.over = nil
+		toReturn.under = nil
+	}
 	return toReturn
-}
-
-func (s *Stack) Print() {
-	next := s.top
-	if next == nil {
-		fmt.Print("\n")
-		return
-	}
-	for next != nil {
-		fmt.Printf("%s ", next.value)
-		next = next.under
-	}
-	fmt.Print("\n")
 }
 
 type Crate struct {
 	value string
 	over  *Crate
 	under *Crate
+}
+
+func (c *Crate) Print() {
+	toPrint := c
+	for toPrint != nil {
+		fmt.Printf("%s", toPrint.value)
+		toPrint = toPrint.over
+	}
+	fmt.Print("\n")
 }
 
 func readInput(filename string) []string {
@@ -116,7 +115,7 @@ func parseMoves(moves []string) []Move {
 func MoveCrates9000(moves []Move, stacks []Stack) []Stack {
 	for _, move := range moves {
 		for i := 0; i < move.nbr; i++ {
-			crate := stacks[move.from-1].Pick()
+			crate := stacks[move.from-1].Pick(1)
 			stacks[move.to-1].Place(crate)
 		}
 	}
@@ -125,15 +124,8 @@ func MoveCrates9000(moves []Move, stacks []Stack) []Stack {
 
 func MoveCrates9001(moves []Move, stacks []Stack) []Stack {
 	for _, move := range moves {
-		tempStack := Stack{}
-		for i := 0; i < move.nbr; i++ {
-			crate := stacks[move.from-1].Pick()
-			tempStack.Place(crate)
-		}
-		for i := 0; i < move.nbr; i++ {
-			crate := tempStack.Pick()
-			stacks[move.to-1].Place(crate)
-		}
+		crate := stacks[move.from-1].Pick(move.nbr)
+		stacks[move.to-1].Place(crate)
 	}
 	return stacks
 }
@@ -150,8 +142,8 @@ func main() {
 	stacks := stackCrates(input[0])
 	moves := parseMoves(strings.Split(input[1], "\n"))
 	part1 := MoveCrates9000(moves, stacks)
+	printOutput("part1: ", part1)
 	stacks = stackCrates(input[0])
 	part2 := MoveCrates9001(moves, stacks)
-	printOutput("part1: ", part1)
 	printOutput("part2: ", part2)
 }

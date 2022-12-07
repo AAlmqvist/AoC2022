@@ -72,10 +72,6 @@ func execCmd(cwd *folder, root *folder, cmds []string) *folder {
 			return cwd.parent
 		default:
 			newWd := cwd.Get(cmd[2])
-			if newWd == nil {
-				fmt.Println(cmd)
-				fmt.Println("newWd is nil, things will break")
-			}
 			return newWd
 		}
 
@@ -84,7 +80,7 @@ func execCmd(cwd *folder, root *folder, cmds []string) *folder {
 			stuff := strings.Split(line, " ")
 			size, err := strconv.Atoi(stuff[0])
 			if err != nil {
-				// subfolder
+				// could not convert to int -> subfolder
 				fold := &folder{name: stuff[1], parent: cwd}
 				cwd.Add(fold)
 				continue

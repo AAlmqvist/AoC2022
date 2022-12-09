@@ -122,10 +122,6 @@ func Move(r *Rope, moves []string) int {
 
 func main() {
 	input := readInput("input.txt")
-	rope1 := NewRope(2)
-	part1 := Move(rope1, input)
-	fmt.Println(part1)
-	rope2 := NewRope(10)
-	part2 := Move(rope2, input)
-	fmt.Println(part2)
+	fmt.Println(Move(NewRope(2), input))
+	fmt.Println(Move(NewRope(10), input))
 }

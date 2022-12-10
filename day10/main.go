@@ -29,7 +29,7 @@ func tick(reg, clock, val, score *int, row string, rows *[]string) string {
 		*score += *clock * *reg
 	}
 	pos := (*clock - 1) % 40
-	pixel := "."
+	pixel := " "
 	if pos >= *reg-1 && pos < *reg+2 {
 		pixel = "#"
 	}

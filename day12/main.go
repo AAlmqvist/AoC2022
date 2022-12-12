@@ -78,7 +78,7 @@ func getHeight(in rune) int {
 	}
 }
 
-func neigh(x, y, nx, ny, val int, grid [][]rune, visited [][]bool) *pQueue {
+func neigh(x, y, nx, ny, val int, grid [][]rune, visited [][]bool, reverse bool) *pQueue {
 	if nx < 0 || nx >= len(grid) {
 		return nil
 	}
@@ -88,13 +88,20 @@ func neigh(x, y, nx, ny, val int, grid [][]rune, visited [][]bool) *pQueue {
 	if visited[nx][ny] {
 		return nil
 	}
-	if getHeight(grid[nx][ny])-getHeight(grid[x][y]) > 1 {
-		return nil
+	if reverse {
+		if getHeight(grid[x][y])-getHeight(grid[nx][ny]) > 1 {
+			return nil
+		}
+
+	} else {
+		if getHeight(grid[nx][ny])-getHeight(grid[x][y]) > 1 {
+			return nil
+		}
 	}
 	return &pQueue{x: nx, y: ny, val: val}
 }
 
-func findShortestPath(sx, sy int, grid [][]rune) int {
+func findShortestPath(sx, sy int, grid [][]rune, reverse bool) int {
 	visited := [][]bool{}
 	for _, row := range grid {
 		visited = append(visited, make([]bool, len(row)))
@@ -103,24 +110,30 @@ func findShortestPath(sx, sy int, grid [][]rune) int {
 	for pq != nil {
 		n := pq
 		pq = n.Next
-		if grid[n.x][n.y] == 'E' {
-			return n.val
+		if reverse {
+			if getHeight(grid[n.x][n.y]) == 0 {
+				return n.val
+			}
+		} else {
+			if grid[n.x][n.y] == 'E' {
+				return n.val
+			}
 		}
 		if !visited[n.x][n.y] {
 			visited[n.x][n.y] = true
-			new := neigh(n.x, n.y, n.x-1, n.y, n.val+1, grid, visited)
+			new := neigh(n.x, n.y, n.x-1, n.y, n.val+1, grid, visited, reverse)
 			if new != nil {
 				pq = Add(pq, new)
 			}
-			new = neigh(n.x, n.y, n.x+1, n.y, n.val+1, grid, visited)
+			new = neigh(n.x, n.y, n.x+1, n.y, n.val+1, grid, visited, reverse)
 			if new != nil {
 				pq = Add(pq, new)
 			}
-			new = neigh(n.x, n.y, n.x, n.y-1, n.val+1, grid, visited)
+			new = neigh(n.x, n.y, n.x, n.y-1, n.val+1, grid, visited, reverse)
 			if new != nil {
 				pq = Add(pq, new)
 			}
-			new = neigh(n.x, n.y, n.x, n.y+1, n.val+1, grid, visited)
+			new = neigh(n.x, n.y, n.x, n.y+1, n.val+1, grid, visited, reverse)
 			if new != nil {
 				pq = Add(pq, new)
 			}
@@ -132,23 +145,16 @@ func findShortestPath(sx, sy int, grid [][]rune) int {
 func main() {
 	input := readInput("input.txt")
 	grid, sx, sy := makeGrid(input)
-	fmt.Println("Starting at ", sx, ",", sy)
-	part1 := findShortestPath(sx, sy, grid)
+	part1 := findShortestPath(sx, sy, grid, false)
 	fmt.Println(part1)
-	starts := [][]int{}
+	var ex, ey int
 	for x, row := range grid {
 		for y, char := range row {
-			if char == 'a' {
-				starts = append(starts, []int{x, y})
+			if char == 'E' {
+				ex, ey = x, y
 			}
 		}
 	}
-	part2 := part1
-	for _, pos := range starts {
-		pathLen := findShortestPath(pos[0], pos[1], grid)
-		if pathLen < part2 {
-			part2 = pathLen
-		}
-	}
+	part2 := findShortestPath(ex, ey, grid, true)
 	fmt.Println(part2)
 }

@@ -209,49 +209,48 @@ func printP(p packet, layer int) {
 	}
 }
 
+func cmp(p1, p2 packet) bool {
+	s, _ := compare(p1, p2)
+	return s
+}
+
 func sort(in []packet) []packet {
+	if len(in) < 12 {
+		// smaller than 12 = do bubble sort
+		swapped := true
+		for swapped {
+			swapped = false
+			i := 0
+			for i < len(in)-1 {
+				if !cmp(in[i], in[i+1]) {
+					in[i], in[i+1] = in[i+1], in[i]
+					swapped = true
+				}
+				i++
+			}
+		}
+		return in
+	}
 	out := []packet{}
-	switch len(in) {
-	case 2:
-		smaller, _ := compare(in[0], in[1])
-		if smaller {
-			return append(out, in[0], in[1])
-		}
-		return append(out, in[1], in[0])
-	case 3:
-		p12 := sort(in[0:2])
-		s1, _ := compare(p12[0], in[2])
-		if s1 {
-			s2, _ := compare(p12[1], in[2])
-			if s2 {
-				return append(out, p12[0], p12[1], in[2])
-			}
-			return append(out, p12[0], in[2], p12[1])
-		} else {
-			return append(out, in[2], p12[0], p12[1])
-		}
-	default:
-		f1 := sort(in[:len(in)/2])
-		f2 := sort(in[len(in)/2:])
-		var i1, i2 int
-		for i1 < len(f1) && i2 < len(f2) {
-			s1, _ := compare(f1[i1], f2[i2])
-			if s1 {
-				out = append(out, f1[i1])
-				i1++
-			} else {
-				out = append(out, f2[i2])
-				i2++
-			}
-		}
-		for i1 < len(f1) {
+	f1 := sort(in[:len(in)/2])
+	f2 := sort(in[len(in)/2:])
+	var i1, i2 int
+	for i1 < len(f1) && i2 < len(f2) {
+		if cmp(f1[i1], f2[i2]) {
 			out = append(out, f1[i1])
 			i1++
-		}
-		for i2 < len(f2) {
+		} else {
 			out = append(out, f2[i2])
 			i2++
 		}
+	}
+	for i1 < len(f1) {
+		out = append(out, f1[i1])
+		i1++
+	}
+	for i2 < len(f2) {
+		out = append(out, f2[i2])
+		i2++
 	}
 	return out
 }

@@ -244,13 +244,11 @@ func sort(in []packet) []packet {
 			i2++
 		}
 	}
-	for i1 < len(f1) {
-		out = append(out, f1[i1])
-		i1++
+	if i1 < len(f1) {
+		out = append(out, f1[i1:]...)
 	}
-	for i2 < len(f2) {
-		out = append(out, f2[i2])
-		i2++
+	if i2 < len(f2) {
+		out = append(out, f2[i2:]...)
 	}
 	return out
 }

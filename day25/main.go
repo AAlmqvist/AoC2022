@@ -53,6 +53,7 @@ func sum(a []int) int {
 	return b
 }
 
+// Makes more sense than you first thought
 func decToSnafu(a int) string {
 	fmt.Println(a)
 	powers := []int{}

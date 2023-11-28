@@ -1,3 +1,4 @@
 **/go.mod
 **/test*.txt
+**.txt
 template.go

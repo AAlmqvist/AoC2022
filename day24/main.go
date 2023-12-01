@@ -130,11 +130,12 @@ type node struct {
 	next *node
 }
 
-func hash(c *node) string {
-	return fmt.Sprintf("%d,%d,%d", c.r, c.c, c.min)
+// There is a finite amount of possible boards (x, y, time (mod width*height))
+func hash(c *node, mod int) string {
+	return fmt.Sprintf("%d,%d,%d", c.r, c.c, c.min%mod)
 }
 
-func findShortestPath(time int, start, end []int, grid [][]int) (int, [][]int) {
+func findShortestPath(time, gridMod int, start, end []int, grid [][]int) (int, [][]int) {
 	q := &queue{}
 	sn := &node{r: start[0], c: start[1], min: time}
 	visited := make(map[string]bool)
@@ -146,7 +147,7 @@ func findShortestPath(time int, start, end []int, grid [][]int) (int, [][]int) {
 			fmt.Println("reached goal at", c.r, c.c)
 			return c.min, grid
 		}
-		h := hash(c)
+		h := hash(c, gridMod)
 		_, ok := visited[h]
 		if ok {
 			continue
@@ -156,7 +157,7 @@ func findShortestPath(time int, start, end []int, grid [][]int) (int, [][]int) {
 			grid = updateGrid(grid)
 			min = c.min
 		}
-		if c.r > 0 && grid[c.r][c.c] == 0 {
+		if c.r > 0 && grid[c.r-1][c.c] == 0 {
 			cn := &node{r: c.r - 1, c: c.c, min: c.min + 1}
 			q.Add(cn)
 		}
@@ -164,11 +165,11 @@ func findShortestPath(time int, start, end []int, grid [][]int) (int, [][]int) {
 			cn := &node{r: c.r + 1, c: c.c, min: c.min + 1}
 			q.Add(cn)
 		}
-		if grid[c.r][c.c-1] == 0 {
+		if c.c > 0 && grid[c.r][c.c-1] == 0 {
 			cn := &node{r: c.r, c: c.c - 1, min: c.min + 1}
 			q.Add(cn)
 		}
-		if grid[c.r][c.c+1] == 0 {
+		if c.c < len(grid[0])-1 && grid[c.r][c.c+1] == 0 {
 			cn := &node{r: c.r, c: c.c + 1, min: c.min + 1}
 			q.Add(cn)
 		}
@@ -178,14 +179,19 @@ func findShortestPath(time int, start, end []int, grid [][]int) (int, [][]int) {
 		c.min += 1
 		q.Add(c)
 	}
-	return 0, grid
+	return -1, grid
 }
 
-func printGrid(grid [][]int) {
-	for _, r := range grid {
+// For debugging purposes
+func printGrid(grid [][]int, c node) {
+	for i, r := range grid {
 		for j, v := range r {
 			if v < 10 || j == len(r)-1 {
 				fmt.Print(" ")
+			}
+			if i == c.r && j == c.c {
+				fmt.Print("@")
+				continue
 			}
 			fmt.Print(v)
 		}
@@ -194,7 +200,7 @@ func printGrid(grid [][]int) {
 }
 
 func main() {
-	input := readInput("test.txt")
+	input := readInput("input.txt")
 	grid := createMap(input)
 	start := []int{0}
 	for i, v := range grid[0] {
@@ -210,10 +216,11 @@ func main() {
 			break
 		}
 	}
-	sp, grid := findShortestPath(0, start, end, grid)
+	gridMod := (len(grid) - 2) * (len(grid[0]) - 2)
+	sp, grid := findShortestPath(0, gridMod, start, end, grid)
 	fmt.Println(sp)
-	sp, grid = findShortestPath(sp, end, start, grid)
-	fmt.Println(sp)
-	sp, grid = findShortestPath(sp, start, end, grid)
+	// Run it again with the start and end nodes switched back and forth
+	sp, grid = findShortestPath(sp+1, gridMod, end, start, grid)
+	sp, grid = findShortestPath(sp+1, gridMod, start, end, grid)
 	fmt.Println(sp)
 }

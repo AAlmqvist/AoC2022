@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+const DEBUG = false
+
+const (
+	right int = iota
+	down
+	left
+	up
+)
+
 func Filter[T any](in []T, fn func(T) bool) []T {
 	res := make([]T, len(in))
 	cnt := 0
@@ -24,6 +33,14 @@ func readInput(filename string) []string {
 	return Filter(strings.Split(string(input), "\n\n"), func(s string) bool { return len(s) > 0 })
 }
 
+func wrapAround(x, n int) int {
+	xn := x % n
+	if xn < 0 {
+		xn += n
+	}
+	return xn
+}
+
 type Pos struct {
 	x   int
 	y   int
@@ -31,14 +48,8 @@ type Pos struct {
 }
 
 func (p *Pos) Move(dx, dy, w, h int) {
-	p.x = (p.x + dx) % w
-	if p.x < 0 {
-		p.x = p.x + w
-	}
-	p.y = (p.y + dy) % h
-	if p.y < 0 {
-		p.y = p.y + h
-	}
+	p.x = wrapAround(p.x+dx, w)
+	p.y = wrapAround(p.y+dy, h)
 }
 
 func (p *Pos) MoveTo(o *Pos) {
@@ -47,10 +58,7 @@ func (p *Pos) MoveTo(o *Pos) {
 }
 
 func (p *Pos) Turn(rot int) {
-	p.dir = (p.dir + rot) % 4
-	if p.dir < 0 {
-		p.dir += 4
-	}
+	p.dir = wrapAround(p.dir+rot, 4)
 }
 
 func (p *Pos) Score() int {
@@ -119,8 +127,11 @@ func parseMoves(in string) [][]int {
 			moves = append(moves, b)
 			val = 0
 		default:
+			s, err := strconv.Atoi(string(e))
+			if err != nil {
+				continue
+			}
 			val *= 10
-			s, _ := strconv.Atoi(string(e))
 			val += s
 		}
 	}
@@ -128,82 +139,56 @@ func parseMoves(in string) [][]int {
 	return moves
 }
 
-func exploreCove(p *Pos, moves, cove [][]int) (*Pos, [][]int) {
+func exploreCove(p *Pos, moves, cove [][]int) *Pos {
 	h, w := len(cove), len(cove[0])
-	fmt.Println(p.y, p.x)
 	for _, m := range moves {
 		v, rot := m[0], m[1]
 		var dx, dy int
 		switch p.dir {
-		case 0:
+		case right:
 			dx = 1
-		case 1:
+		case down:
 			dy = 1
-		case 2:
+		case left:
 			dx = -1
-		case 3:
+		case up:
 			dy = -1
 		}
 		j := 0
-		fmt.Println(p.dir)
 		o := p.copy()
 		for j < v && cove[o.y][o.x] != 1 {
 			o.Move(dx, dy, w, h)
 			for cove[o.y][o.x] == -1 {
 				o.Move(dx, dy, w, h)
 			}
-			// if cove[o.y][o.x] != 1 && cove[o.y][o.x] != -1 {
 			if cove[o.y][o.x] == 0 {
 				p.MoveTo(o)
-				cove[p.y][p.x] = 2 + o.dir
 			}
 			j++
 		}
 		p.Turn(rot)
-		cove[o.y][o.x] = 2 + p.dir
-		// fmt.Println(p.y, p.x)
 	}
-	return p, cove
+	return p
 }
 
 func main() {
-	input := readInput("test.txt")
+	input := readInput("input.txt")
 	cove, start := readMap(input[0])
-	for _, e := range cove {
-		for _, b := range e {
-			switch b {
-			case -1:
-				fmt.Print("  ")
-			default:
-				fmt.Printf("%d ", b)
+	if DEBUG {
+		for _, e := range cove {
+			for _, b := range e {
+				switch b {
+				case -1:
+					fmt.Print("  ")
+				default:
+					fmt.Printf("%d ", b)
+				}
 			}
+			fmt.Print("\n")
 		}
-		fmt.Print("\n")
+		fmt.Println("Starting coordinates", start.y, start.x)
 	}
-	fmt.Println("Starting coordinates", start.y, start.x)
-	// moves := parseMoves(input[1])
-	moves := parseMoves("4R2L3R3R2L1R7R1L6R4R6R2L5R2L2R4")
-	final, cove2 := exploreCove(start, moves, cove)
-	for _, e := range cove2 {
-		for _, b := range e {
-			switch b {
-			case -1:
-				fmt.Print(" ")
-			case 0:
-				fmt.Print(".")
-			case 1:
-				fmt.Print("#")
-			case 2:
-				fmt.Print(">")
-			case 3:
-				fmt.Print("v")
-			case 4:
-				fmt.Print("<")
-			case 5:
-				fmt.Print("^")
-			}
-		}
-		fmt.Print("\n")
-	}
+	moves := parseMoves(input[1])
+	final := exploreCove(start, moves, cove)
 	fmt.Println(final.Score())
 }

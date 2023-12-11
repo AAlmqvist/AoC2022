@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const DEBUG = false
+const DEBUG = true
 
 const (
 	right int = iota
@@ -139,7 +139,8 @@ func parseMoves(in string) [][]int {
 	return moves
 }
 
-func exploreCove(p *Pos, moves, cove [][]int) *Pos {
+func exploreCove(start *Pos, moves, cove [][]int) *Pos {
+	p := start.copy()
 	h, w := len(cove), len(cove[0])
 	for _, m := range moves {
 		v, rot := m[0], m[1]
@@ -174,21 +175,9 @@ func exploreCove(p *Pos, moves, cove [][]int) *Pos {
 func main() {
 	input := readInput("input.txt")
 	cove, start := readMap(input[0])
-	if DEBUG {
-		for _, e := range cove {
-			for _, b := range e {
-				switch b {
-				case -1:
-					fmt.Print("  ")
-				default:
-					fmt.Printf("%d ", b)
-				}
-			}
-			fmt.Print("\n")
-		}
-		fmt.Println("Starting coordinates", start.y, start.x)
-	}
 	moves := parseMoves(input[1])
 	final := exploreCove(start, moves, cove)
 	fmt.Println(final.Score())
+	cube := cubeFromMap(cove, start)
+	print(cube.p)
 }

@@ -17,7 +17,7 @@ var cubeEdgeMapping [6]edgeMap = [6]edgeMap{
 	},
 	// side 2
 	{
-		sideNbr:    [4]int{5, 3, 0, 2},
+		sideNbr:    [4]int{5, 3, 0, 1},
 		edgeNumber: [4]int{2, 0, 0, 0},
 		mirrored:   [4]bool{false, false, false, true},
 	},
@@ -30,13 +30,13 @@ var cubeEdgeMapping [6]edgeMap = [6]edgeMap{
 	// side 4
 	{
 		sideNbr:    [4]int{0, 3, 5, 1},
-		edgeNumber: [4]int{2, 3, 0, 2},
+		edgeNumber: [4]int{2, 2, 0, 2},
 		mirrored:   [4]bool{false, true, false, false},
 	},
 	// side 5
 	{
 		sideNbr:    [4]int{4, 3, 2, 1},
-		edgeNumber: [4]int{2, 3, 2, 1},
+		edgeNumber: [4]int{2, 1, 0, 3},
 		mirrored:   [4]bool{false, true, false, true},
 	},
 }
@@ -47,11 +47,40 @@ type edgeMap struct {
 	mirrored   [4]bool
 }
 
-func (e *edgeMap) side(r int) (int, int, bool) {
-	if r < 0 || r > 3 {
-		panic("Rotation out of scope (not in [0,3])")
+func (em *edgeMap) getNewPos(dir, other, size int) (int, *Pos) {
+	newSide := em.sideNbr[dir]
+	newDir := (em.edgeNumber[dir] + 2) % 4
+	newPos := &Pos{dir: newDir}
+	switch newDir {
+	case right:
+		newPos.x = 0
+		newPos.y = other
+		if em.mirrored[dir] {
+			newPos.y = size - 1 - other
+		}
+	case down:
+		newPos.x = other
+		newPos.y = 0
+		if em.mirrored[dir] {
+			newPos.x = size - 1 - other
+		}
+
+	case left:
+		newPos.x = size - 1
+		newPos.y = other
+		if em.mirrored[dir] {
+			newPos.y = size - 1 - other
+		}
+
+	case up:
+		newPos.x = other
+		newPos.y = size - 1
+		if em.mirrored[dir] {
+			newPos.x = size - 1 - other
+		}
 	}
-	return e.sideNbr[r], e.edgeNumber[r], e.mirrored[r]
+
+	return newSide, newPos
 }
 
 type side struct {
@@ -67,28 +96,14 @@ type side struct {
 // Rotate the grid 90 degrees clockwise
 func (s *side) rotate() {
 	newGrid := [][]int{}
-	for i := range s.grid {
+	for y := range s.grid {
 		row := []int{}
-		for j := range s.grid[i] {
-			row = append(row, s.grid[j][s.size-1-i])
+		for x := range s.grid[y] {
+			row = append(row, s.grid[s.size-1-x][y])
 		}
 		newGrid = append(newGrid, row)
 	}
 	s.grid = newGrid
-}
-
-// Find original position on in the cove given the relative position on the side
-func (s *side) originalPos(pos *Pos) *Pos {
-	orgPos := pos.copy()
-	leftToRotate := (4 - s.rotation) % 4
-	for leftToRotate > 0 {
-		orgPos.y = orgPos.x
-		orgPos.x = s.size - 1 - orgPos.y
-		orgPos.dir = wrapAround(orgPos.dir+1, 4)
-	}
-	orgPos.y += s.translation[0]
-	orgPos.x += s.translation[1]
-	return orgPos
 }
 
 // A representation of a cube formed by 6 square sides in a pattern
@@ -105,8 +120,119 @@ type cube struct {
 	sides [6]*side
 }
 
+func (c *cube) move(steps int) {
+	for i := 0; i < steps; i++ {
+		currSide := c.sides[c.curr]
+		hitRock := false
+		switch c.p.dir {
+		case right:
+			// Still on same side
+			if c.p.x < currSide.size-1 {
+				if currSide.grid[c.p.y][c.p.x+1] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.p.x += 1
+			} else {
+				nextSide, newPos := cubeEdgeMapping[c.curr].getNewPos(c.p.dir, c.p.y, currSide.size)
+				if c.sides[nextSide].grid[newPos.y][newPos.x] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.curr = nextSide
+				c.p = newPos
+			}
+		case down:
+			// Still on same side
+			if c.p.y < currSide.size-1 {
+				if currSide.grid[c.p.y+1][c.p.x] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.p.y += 1
+			} else {
+				nextSide, newPos := cubeEdgeMapping[c.curr].getNewPos(c.p.dir, c.p.x, currSide.size)
+				if c.sides[nextSide].grid[newPos.y][newPos.x] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.curr = nextSide
+				c.p = newPos
+			}
+		case left:
+			// Still on same side
+			if c.p.x > 0 {
+				if currSide.grid[c.p.y][c.p.x-1] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.p.x -= 1
+			} else {
+				nextSide, newPos := cubeEdgeMapping[c.curr].getNewPos(c.p.dir, c.p.y, currSide.size)
+				if c.sides[nextSide].grid[newPos.y][newPos.x] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.curr = nextSide
+				c.p = newPos
+			}
+		case up:
+			// Still on same side
+			if c.p.y > 0 {
+				if currSide.grid[c.p.y-1][c.p.x] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.p.y -= 1
+			} else {
+				nextSide, newPos := cubeEdgeMapping[c.curr].getNewPos(c.p.dir, c.p.x, currSide.size)
+				if c.sides[nextSide].grid[newPos.y][newPos.x] == 1 {
+					// Hit a rock
+					hitRock = true
+					break
+				}
+				c.curr = nextSide
+				c.p = newPos
+			}
+		}
+		if hitRock {
+			break
+		}
+	}
+}
+
+// Use the current side the position is on to rotate and then
+// translate into the positions corresponding position in the cove
+// and then use the score from the first part
+func (c *cube) orig_pos() *Pos {
+	o := c.p.copy()
+	// Find original rotaton and relative position
+	for i := 0; i < c.sides[c.curr].rotation; i++ {
+		// x corresponds to col, y to row
+		x := o.x
+		y := o.y
+		o.x = y
+		o.y = c.sides[c.curr].size - 1 - x
+		// rotate direction
+		o.dir = wrapAround(o.dir-1, 4)
+	}
+	// Translate back to original position as well
+	o.y += c.sides[c.curr].translation[0]
+	o.x += c.sides[c.curr].translation[1]
+
+	// We're in original place and rotation, return the score
+	return o
+}
+
 func cubeFromMap(cove [][]int, start *Pos) *cube {
-	cube := &cube{p: start}
+	cube := &cube{p: &Pos{}}
 	for i := 0; i < 6; i++ {
 		cube.sides[i] = &side{}
 	}
@@ -182,8 +308,7 @@ func cubeFromMap(cove [][]int, start *Pos) *cube {
 			if sideGrid[r+dr][c+dc] >= 0 && !visited[r+dr][c+dc] {
 				relSide := (rot + dir) % 4
 				neighbor := cubeEdgeMapping[ind].sideNbr[relSide]
-				opposite := (dir + 2) % 4
-				relRot := wrapAround(cubeEdgeMapping[ind].edgeNumber[relSide]-opposite, 4)
+				relRot := wrapAround(cubeEdgeMapping[ind].edgeNumber[relSide]-(dir+2)%4, 4)
 				nodes = append(
 					nodes,
 					[]int{neighbor,
@@ -196,16 +321,6 @@ func cubeFromMap(cove [][]int, start *Pos) *cube {
 		}
 	}
 	if DEBUG {
-		for _, r := range sideGrid {
-			for _, c := range r {
-				var s string
-				if c >= 0 {
-					s = " "
-				}
-				fmt.Printf("%s%d ", s, c)
-			}
-			fmt.Println()
-		}
 		for si, side := range cube.sides {
 			fmt.Printf("%d => %v %d\n", si, side.translation, side.rotation)
 		}

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const DEBUG = true
+const DEBUG = false
 
 const (
 	right int = iota
@@ -42,8 +42,8 @@ func wrapAround(x, n int) int {
 }
 
 type Pos struct {
-	x   int
 	y   int
+	x   int
 	dir int
 }
 
@@ -69,7 +69,7 @@ func (p *Pos) copy() *Pos {
 	nx := p.x
 	ny := p.y
 	ndir := p.dir
-	return &Pos{nx, ny, ndir}
+	return &Pos{y: ny, x: nx, dir: ndir}
 }
 
 func findWidth(rows []string) int {
@@ -179,5 +179,9 @@ func main() {
 	final := exploreCove(start, moves, cove)
 	fmt.Println(final.Score())
 	cube := cubeFromMap(cove, start)
-	print(cube.p)
+	for _, move := range moves {
+		cube.move(move[0])
+		cube.p.Turn(move[1])
+	}
+	fmt.Println(cube.orig_pos().Score())
 }
